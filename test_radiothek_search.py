@@ -1,6 +1,7 @@
 import time
 
 import pytest as pytest
+from selenium.webdriver import Keys
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
@@ -29,7 +30,7 @@ def chrome_driver():
     accept_button = WebDriverWait(driver, 5).until(expectation)
     time.sleep(1)
     accept_button.click()
-    time.sleep(5)
+    time.sleep(1)
 
     # return browser setup
     yield driver
@@ -38,11 +39,9 @@ def chrome_driver():
     driver.quit()
 
 
-"""
-
-def test_basic_search(chrome_driver):
+def test1_basic_search(chrome_driver):
     search_element = chrome_driver.find_element(By.CSS_SELECTOR, "input[type=search]")
-    search_text = "Jazz"
+    search_text = "Nachmittag"
     search_element.send_keys(search_text)
 
     submit = chrome_driver.find_element(By.CSS_SELECTOR, "button[type=submit]")
@@ -55,14 +54,14 @@ def test_basic_search(chrome_driver):
     result_header_element = WebDriverWait(chrome_driver, 5).until(result_is_present)
     # print(result_header_element.text)
     assert result_header_element.text == f'Suchergebnis für "{search_text}"'
-    time.sleep(5)
 
 
 
-def test_search_collect(chrome_driver):
+def test2_search_collect(chrome_driver):
     #Enter search text
     search_element = chrome_driver.find_element(By.CSS_SELECTOR, "input[type=search]")
     search_text = "Nachmittag"
+    search_element.send_keys(Keys.CONTROL, 'a')  # it navigates to the begin of the search field
     search_element.send_keys(search_text)
     submit = chrome_driver.find_element(By.CSS_SELECTOR, "button[type=submit]")
     submit.click()
@@ -79,43 +78,64 @@ def test_search_collect(chrome_driver):
     result_dict = {}
     for x in result_list:
         name = x.text
-        count = 0
-        for y in result_list:       #count the occurrence of this element in the list
-            if name.upper() == y.text.upper():
-                count += 1
-        result_dict.update({name: count})  # dictionary do not allow duplicates, that is why no additional check
+        if name in result_dict.keys():
+            result_dict[name] += 1
+        else:
+            result_dict.update({name: 1})
 
     print("\n\nwhat did you find?:")
     print(result_dict)
 
     assert len(result_dict.keys()) > 1
-"""
 
-def test_search_with_options(chrome_driver):
-    #Enter search text
+
+def test3_search_with_options(chrome_driver):
+    # Enter search text
     search_element = chrome_driver.find_element(By.CSS_SELECTOR, "input[type=search]")
-    search_text = "Nachmittag"
+
+    search_text = "Jazz"
+    search_element.click()
+    #search_element.clear()
+    search_element.send_keys(Keys.CONTROL, 'a')   #it navigates to the begin of the search field
     search_element.send_keys(search_text)
     submit = chrome_driver.find_element(By.CSS_SELECTOR, "button[type=submit]")
     submit.click()
 
-    #select senders in combo box
-    select = Select(chrome_driver.find_element(By.CSS_SELECTOR, ""))
+    # select senders in combo box
+    sender = chrome_driver.find_element(By.CSS_SELECTOR, "div[title='Nach Sendern filtern']")
+    sender.click()
 
-    select.select_by_value("oe3")  # select Ö3
-    select.select_by_value("fm4")
+    oe1 = chrome_driver.find_element(By.XPATH, "//li[contains(@id, 'results-oe1')]")
+    # oe1.location_once_scrolled_into_view
+    chrome_driver.execute_script("arguments[0].click();", oe1)
 
-    result_list = chrome_driver.find_elements(By.CSS_SELECTOR, 'span.type')
+    sender.click()
+    wie = chrome_driver.find_element(By.XPATH, "//li[contains(@id, 'results-wie')]")
+    # wie.location_once_scrolled_into_view  #does not work!!
+
+    # wie_present=EC.presence_of_element_located((By.XPATH, "//li[contains(@id, 'results-wie')]"))
+    # WebDriverWait(chrome_driver, 5).until().click()
+    chrome_driver.execute_script("arguments[0].click();",
+                                 wie)  # unknown reason why this works. This is an Idee from stackowerflow.
+
+    chrome_driver.refresh()
+    # Wait for search result
+    result_is_present = EC.presence_of_element_located((By.CSS_SELECTOR, ".search-has-query h2"))
+    # Try all 500 milliseconds if expectation is fulfilled, timeout after 5 seconds
+    WebDriverWait(chrome_driver, 5).until(result_is_present)
+
+    # add search result to a list
+    result_list = chrome_driver.find_elements(By.CSS_SELECTOR, "span.type")
     result_dict = {}
     for x in result_list:
         name = x.text
-        count = 0
-        for y in result_list:  # count the occurrence of this element in the list
-            if name.upper() == y.text.upper():
-                count += 1
-        result_dict.update({name: count})  # dictionary do not allow duplicates, that is why no additional check
+        if name in result_dict.keys():
+            result_dict[name] += 1
+        else:
+            result_dict.update({name: 1})
 
     print("\n\nwhat did you find?:")
     print(result_dict)
 
-    assert len(result_dict.keys()) > 1
+    assert 'Ö1' in result_dict.keys()
+    assert 'Radio Wien' in result_dict.keys()
