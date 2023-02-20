@@ -20,11 +20,11 @@ def chrome_driver():
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=settings)
 
     # open radiothek webpage
-    url = "https://radiothek.orf.at/search"
+    url = "https://sound.orf.at/radio"
     driver.get(url)
 
     # search accept cookie button
-    expectation = EC.presence_of_element_located((By.CSS_SELECTOR, '#didomi-notice-agree-button'))
+    expectation = EC.presence_of_element_located((By.CSS_SELECTOR, '#Alle Cookies akzeptieren'))
 
     # click button if appear
     accept_button = WebDriverWait(driver, 5).until(expectation)
